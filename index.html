@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Évolution de la confiance envers ChatGPT</title>
+  <!-- Inclusion de Chart.js depuis le CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      max-width: 800px;
+    }
+    h1 {
+      text-align: center;
+    }
+    #chartContainer {
+      position: relative;
+      margin: auto;
+      height: 400px;
+      width: 100%;
+    }
+    #phaseDescription {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      background: #f9f9f9;
+      min-height: 80px;
+    }
+    .navButtons {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .navButtons button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 0 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Évolution de la confiance envers ChatGPT</h1>
+
+  <div id="chartContainer">
+    <canvas id="trustChart"></canvas>
+  </div>
+
+  <div class="navButtons">
+    <button id="prevButton" onclick="goPrev()">&#8592;</button>
+    <button id="nextButton" onclick="goNext()">&#8594;</button>
+  </div>
+
+  <div id="phaseDescription"></div>
+
+  <script>
+    // Définition des phases avec leurs niveaux de confiance et descriptions
+    const phases = [
+      {
+        phase: "Phase 1",
+        confiance: 100,
+        description: "Wow. ChatGPT est capable de répondre à toutes mes questions. Il génère rapidement des réponses très élaborées qui sont crédibles et cohérentes. Enfin, un chatbot qui se comporte comme un super humain."
+      },
+      {
+        phase: "Phase 2",
+        confiance: 50,
+        description: "Attendez une minute. ChatGPT est alimenté par un grand modèle de langage (LLM) qui est finalement un outil statistique utilisé pour prédire le langage sans le comprendre et produire des réponses « statiquement plausibles »."
+      },
+      {
+        phase: "Phase 3",
+        confiance: 20,
+        description: "Zut. Cela signifie que ChatGPT générera occasionnellement des réponses incorrectes en assemblant par inadvertance de mauvais fragments d'information ensemble."
+      },
+      {
+        phase: "Phase 4",
+        confiance: 35,
+        description: "Compris. ChatGPT est génial lorsqu'il n'y a pas de réponse « précise » à donner. Mais il ne peut pas être fiable lorsque la réponse doit être « parfaite » pour être réellement utile."
+      },
+      {
+        phase: "Phase 5",
+        confiance: 75,
+        description: "Prêt maintenant. Maintenant, je comprends où réside la véritable valeur de ChatGPT. Il peut certainement augmenter ma productivité, mais il est important de reconnaître quand il se trompe complètement."
+      }
+    ];
+
+    // Variables de suivi :
+    // currentPhase : indice de la phase actuellement affichée dans la description
+    // phasesDisplayed : nombre de phases actuellement affichées sur la courbe
+    let currentPhase = 0;
+    let phasesDisplayed = 1; // La phase 1 est affichée dès le départ
+
+    // Initialisation des données pour le graphique :
+    // On initialise le tableau avec la valeur de la phase 1 et null pour les autres phases.
+    let initialData = phases.map((phase, index) => index === 0 ? phase.confiance : null);
+
+    // Création du graphique avec les 5 étiquettes sur l'axe horizontal dès le chargement
+    const ctx = document.getElementById('trustChart').getContext('2d');
+    const trustChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: phases.map(p => p.phase),
+        datasets: [{
+          label: "Niveau de confiance envers ChatGPT",
+          data: initialData,
+          borderColor: 'blue',
+          borderWidth: 5,      // Trait plus épais
+          backgroundColor: 'rgba(0, 0, 255, 0.1)',
+          fill: false,
+          tension: 0.4,        // Courbe lissée
+          pointRadius: 6,
+          pointHoverRadius: 8
+        }]
+      },
+      options: {
+        scales: {
+          y: {
+            min: 0,
+            max: 100,
+            title: {
+              display: true,
+              text: 'Niveau de confiance (%)'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Connaissance de ChatGPT'
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        // Permet de cliquer sur un point pour afficher sa description
+        onClick: (evt) => {
+          const points = trustChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
+          if (points.length) {
+            const index = points[0].index;
+            currentPhase = index;
+            updateDescription();
+            updateButtons();
+          }
+        }
+      }
+    });
+
+    // Met à jour l'affichage de la description en fonction de la phase courante
+    function updateDescription() {
+      const phase = phases[currentPhase];
+      document.getElementById('phaseDescription').innerHTML =
+        "<strong>" + phase.phase + " :</strong> " + phase.description +
+        "<br><em>Niveau de confiance : " + phase.confiance + "%</em>";
+    }
+
+    // Met à jour l'état des boutons en fonction de l'état actuel
+    function updateButtons() {
+      // On désactive le bouton "Précédent" si aucune phase antérieure n'est affichée
+      document.getElementById('prevButton').disabled = (phasesDisplayed <= 1);
+      // Pour "Suivant" : s'il reste des phases à ajouter, le bouton est actif ; sinon, on ne peut avancer
+      if (phasesDisplayed < phases.length) {
+        document.getElementById('nextButton').disabled = false;
+      } else {
+        document.getElementById('nextButton').disabled = (currentPhase === phases.length - 1);
+      }
+    }
+
+    // Bouton "→" : avance dans le cheminement ou ajoute la phase suivante si elle n'est pas encore affichée
+    function goNext() {
+      if (phasesDisplayed < phases.length) {
+        // Ajout de la phase suivante sur la courbe
+        trustChart.data.datasets[0].data[phasesDisplayed] = phases[phasesDisplayed].confiance;
+        currentPhase = phasesDisplayed;
+        phasesDisplayed++;
+        trustChart.update();
+        updateDescription();
+      } else if (currentPhase < phasesDisplayed - 1) {
+        // Navigation parmi les phases déjà affichées (cas peu probable dans cette navigation séquentielle)
+        currentPhase++;
+        updateDescription();
+      }
+      updateButtons();
+    }
+
+    // Bouton "←" : recule dans le cheminement et efface le dernier point affiché
+    function goPrev() {
+      if (phasesDisplayed > 1) {
+        // On retire le dernier point de la courbe
+        phasesDisplayed--;
+        trustChart.data.datasets[0].data[phasesDisplayed] = null;
+        currentPhase = phasesDisplayed - 1;
+        trustChart.update();
+        updateDescription();
+        updateButtons();
+      }
+    }
+
+    // Initialisation de l'affichage
+    updateDescription();
+    updateButtons();
+  </script>
+
+</body>
+</html>
